@@ -42,8 +42,9 @@ MAPPING_DICT = {
     'communications': 'Infrastructure',
     'connexion': 'Infrastructure',
     'caisse': 'Dépenses exceptionnelles',
-    'Icam': 'Education',
-    'ESS-UCAC': 'Education',
+    'icam': 'Education',
+    
+    'ess-ucac': 'Education',
     'voiture': 'Infrastructure',
     'ecole': 'Education',
     'particulier': 'Dépenses exceptionnelles',
