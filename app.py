@@ -42,6 +42,12 @@ MAPPING_DICT = {
     'communications': 'Infrastructure',
     'connexion': 'Infrastructure',
     'caisse': 'Dépenses exceptionnelles',
+    'Icam': 'Education',
+    'ESS-UCAC': 'Education',
+    'voiture': 'Infrastructure',
+    'ecole': 'Education',
+    'particulier': 'Dépenses exceptionnelles',
+    'particuliers': 'Dépenses exceptionnelles',
 }
 
 def get_classification(type_text):
