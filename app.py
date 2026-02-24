@@ -206,9 +206,10 @@ if uploaded_files:
                             check_val = row[col]
                             if pd.notna(check_val) and isinstance(check_val, str):
                                 upper_val = check_val.upper()
-                                if 'TOTAL' in upper_val or 'SBA' in upper_val:
-                                    i = len(df)  # Sortir de toutes les boucles
-                                    break
+                                if 'TOTAL' in upper_val:
+                                    if 'DECHARGE' in upper_val or centre.upper() in upper_val:
+                                        i = len(df)  
+                                        break
                         
                         if i >= len(df):
                             break
@@ -221,9 +222,10 @@ if uploaded_files:
                         check_val = df.iloc[i, col] if i < len(df) else None
                         if pd.notna(check_val) and isinstance(check_val, str):
                             upper_val = str(check_val).upper()
-                            if 'TOTAL' in upper_val or 'SBA' in upper_val:
-                                i = len(df)
-                                break
+                            if 'TOTAL' in upper_val:
+                                if 'DECHARGE' in upper_val or centre.upper() in upper_val:
+                                    i = len(df)
+                                    break
             
             if len(ListeDecharge) == 0:
                 raise ValueError(f"Aucune donnée extraite dans {uploaded_file.name}")
