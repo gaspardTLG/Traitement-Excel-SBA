@@ -93,7 +93,8 @@ if uploaded_files:
             pays = "Cameroun"
             # Gestion du nom du centre (peut contenir des underscores)
             date = parts[0]
-            centre = '_'.join(parts[2:])  # Prend tout après "Décharge_"
+            centre = '_'.join(parts[2:]) # Prend tout après "Décharge_"
+            centre = centre.replace("-"," ")
             if centre.lower()=="mali":
                 pays = "Mali"
                 
