@@ -12,6 +12,7 @@ MAPPING_DICT = {
     'assainissement': 'Infrastructure',
     'déchets': 'Infrastructure',
     'pépites': 'Projets',
+    'pepites': 'Projets',
     'défraiements': 'Defraiements',
     'defraiement': 'Defraiements',
     'chef': 'Defraiements',
@@ -43,7 +44,6 @@ MAPPING_DICT = {
     'connexion': 'Infrastructure',
     'caisse': 'Dépenses exceptionnelles',
     'icam': 'Education',
-    
     'ess-ucac': 'Education',
     'voiture': 'Infrastructure',
     'ecole': 'Education',
@@ -90,20 +90,21 @@ if uploaded_files:
             # Extraction des infos depuis le nom de fichier
             nom = uploaded_file.name.split('.')[0]
             parts = nom.split('_')
-            
+            pays = "Cameroun"
             # Gestion du nom du centre (peut contenir des underscores)
             date = parts[0]
             centre = '_'.join(parts[2:])  # Prend tout après "Décharge_"
-            
+            if centre.lower()=="mali":
+                pays = "Mali"
+                
             mois_dict = {
                 '01': 'Janvier', '02': 'Février', '03': 'Mars', '04': 'Avril',
                 '05': 'Mai', '06': 'Juin', '07': 'Juillet', '08': 'Août',
                 '09': 'Septembre', '10': 'Octobre', '11': 'Novembre', '12': 'Décembre'
             }
             
-            mois = mois_dict[date.split('-')[0]]
+            mois = date.split('-')[0]
             annee = date.split('-')[1]
-            supp = f'01-{date.split("-")[0]}-{date.split("-")[1]}'
             
             # Lire sans header pour gérer tous les formats
             df = pd.read_excel(uploaded_file, header=None)
@@ -140,7 +141,6 @@ if uploaded_files:
             # Extraction des données
             ListeType = []
             ListeFamille = []
-            ListeClass = []
             ListeDescription = []
             ListeDecharge = []
             unfound_items = []  # Pour tracker les items sans correspondance
@@ -195,7 +195,6 @@ if uploaded_files:
                             
                             ListeType.append(INFO)
                             ListeFamille.append(classification)  # Utiliser la classification mappée
-                            ListeClass.append(classification)    # Utiliser la classification mappée
                             ListeDescription.append(description)
                             ListeDecharge.append(montant)
                         
@@ -230,13 +229,11 @@ if uploaded_files:
             
             # Création du DataFrame pour ce fichier
             df_result = pd.DataFrame({
-                'Pays': ['Cameroun'] * len(ListeFamille),
+                'Pays': [pays] * len(ListeFamille),
                 'Centre': [centre] * len(ListeFamille),
                 'Type': ListeType,
                 'Famille': ListeFamille,
-                'Classification': ListeClass,
                 'Description': ListeDescription,
-                'Date': [supp] * len(ListeFamille),
                 'Mois': [mois] * len(ListeFamille),
                 'Annee': [annee] * len(ListeFamille),
                 'Ref': [date] * len(ListeFamille),
