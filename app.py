@@ -102,9 +102,9 @@ if uploaded_files:
             if centre.lower()=="mali":
                 pays = "Mali"
             
-            mois = date.split('-')[0]
-            annee = "20" + date.split('-')[1]
-            date = mois + "-" + annee
+            mois = int(date.split('-')[0])
+            annee = int("20" + date.split('-')[1])
+            date = str(mois) + "-" + str(annee)
             
             # Lire sans header pour gérer tous les formats
             df = pd.read_excel(uploaded_file, header=None)
@@ -236,8 +236,8 @@ if uploaded_files:
                 'Type': ListeType,
                 'Famille': ListeFamille,
                 'Description': ListeDescription,
-                'Mois': [int(mois)] * len(ListeFamille),
-                'Annee': [int(annee)] * len(ListeFamille),
+                'Mois': [mois] * len(ListeFamille),
+                'Annee': [annee] * len(ListeFamille),
                 'Ref': [date] * len(ListeFamille),
                 'Decharge': ListeDecharge
             })
