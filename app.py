@@ -4,7 +4,7 @@ import io
 
 st.set_page_config(page_title="Traitement Excel SBA", page_icon="📊")
 
-# Dictionnaire de mapping pour Classification et Famille
+# Dictionnaire de mapping pour Famille
 MAPPING_DICT = {
     'internet': 'Infrastructure',
     'electricité': 'Frais de fonctionnement',
@@ -55,25 +55,46 @@ MAPPING_DICT = {
     'particuliers': 'Dépenses exceptionnelles',
 }
 
-def get_classification(type_text):
-    """
-    Cherche dans le dictionnaire de mapping pour trouver la classification.
-    Retourne (classification, found) où found indique si un match a été trouvé.
-    """
+
+CLASSIFICATION_DICT = {
+    'bac' : 'Education',
+    'rugby' : 'Rugby',
+    'eau' : 'Infrastructures',
+    'Médical' : 'Santé/Genre',
+    'transport' : 'Infrastructures',
+    'chef de centre' : 'Education',
+    'imprévus' : 'Imprévus',
+    'internet' : 'Infrastructures',
+    'enseignant' : 'Education',
+    'nutrition' : 'Santé/Genre',
+    'loyer' : 'Infrastructures',
+    'scolaires' : 'Education',
+    'couture' : 'Santé/Genre',
+    'administratif' : 'Infrastructures',
+    'electricité' : 'Infrastructures', 
+    'pépites' : 'Pépites'
+}
+
+
+def get_famille(type_text):
     type_lower = type_text.lower().strip()
-    
-    # Chercher une correspondance exacte ou partielle
     for key, value in MAPPING_DICT.items():
         if key in type_lower:
             return value, True
-    
-    # Aucune correspondance trouvée
     return "Aucune info", False
+
+
+def get_classification(type_text):
+    type_lower = type_text.lower().strip()
+    for key, value in CLASSIFICATION_DICT.items():
+        if key in type_lower:
+            return value, True
+    return "Aucune info", False
+
 
 st.title("📊 Traitement des Décharges Excel")
 st.write("Upload un ou plusieurs fichiers Excel et télécharge le résultat combiné.")
 
-# Upload de plusieurs fichiers
 uploaded_files = st.file_uploader(
     "Dépose tes fichiers Excel ici (tu peux en sélectionner plusieurs)", 
     type=['xlsx', 'xls'],
@@ -81,42 +102,34 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
-    # Afficher le nombre de fichiers uploadés
     st.success(f"✅ {len(uploaded_files)} fichier(s) chargé(s)")
     
-    # Liste pour stocker tous les DataFrames traités
     all_dataframes = []
     
-    # Fonction de traitement (pour éviter la répétition)
     def process_file(uploaded_file):
         """Traite un fichier Excel et retourne le DataFrame résultant"""
         try:
-            # Extraction des infos depuis le nom de fichier
             nom = uploaded_file.name.split('.')[0]
             parts = nom.split('_')
             pays = "Cameroun"
-            # Gestion du nom du centre (peut contenir des underscores)
             date = parts[0]
-            centre = '_'.join(parts[2:]) # Prend tout après "Décharge_"
+            centre = '_'.join(parts[2:])
             centre = centre.replace("-"," ").replace("_"," ")
-            if centre.lower()=="mali":
+            if centre.lower() == "mali":
                 pays = "Mali"
             
             mois = int(date.split('-')[0])
             annee = int("20" + date.split('-')[1])
             date = str(mois) + "-" + str(annee)
             
-            # Lire sans header pour gérer tous les formats
             df = pd.read_excel(uploaded_file, header=None)
             
-            # Fonction pour retirer les deux-points et espaces
             def remove_colon(string):
                 string = str(string).strip()
                 if string.endswith(':'):
                     return string[:-1].strip()
                 return string
             
-            # Trouver où commencent les vraies données (première ligne avec ":")
             start_row = None
             data_col = None
             amount_col = None
@@ -125,11 +138,9 @@ if uploaded_files:
                 for j in range(len(df.columns)):
                     val = df.iloc[i, j]
                     if pd.notna(val) and isinstance(val, str):
-                        # Chercher une catégorie (se termine par : et pas "Tel" ou "Période")
                         if ':' in val and not val.startswith('Tel') and 'Période' not in val:
                             start_row = i
                             data_col = j
-                            # Colonne des montants = même colonne que la catégorie
                             amount_col = j
                             break
                 if start_row is not None:
@@ -138,69 +149,63 @@ if uploaded_files:
             if start_row is None:
                 raise ValueError(f"Impossible de trouver le début des données dans {uploaded_file.name}")
             
-            # Extraction des données
             ListeType = []
             ListeFamille = []
+            ListeClassification = []
             ListeDescription = []
             ListeDecharge = []
-            unfound_items = []  # Pour tracker les items sans correspondance
+            unfound_famille = []
+            unfound_classification = []
             
             i = start_row
             while i < len(df):
                 row = df.iloc[i]
                 val = row[data_col]
                 
-                # Vérifier si c'est une catégorie (se termine par :)
                 if pd.notna(val) and isinstance(val, str) and ':' in val:
-                    # C'est une catégorie
                     INFO = remove_colon(val)
                     i += 1
                     
-                    # Lire les montants jusqu'à la prochaine catégorie ou ligne vide
                     while i < len(df):
                         row = df.iloc[i]
                         
-                        # Vérifier si ligne vide (toutes les colonnes sont NaN)
                         if row.isna().all():
                             i += 1
                             break
                         
-                        # Vérifier si nouvelle catégorie
                         val_check = row[data_col]
                         if pd.notna(val_check) and isinstance(val_check, str) and ':' in val_check:
-                            # C'est une nouvelle catégorie, on sort de la boucle interne
                             break
                         
-                        # Vérifier si c'est un montant (nombre)
                         montant = row[amount_col]
                         if pd.notna(montant) and (isinstance(montant, (int, float)) or str(montant).replace(' ', '').isdigit()):
-                            # Chercher une description dans les autres colonnes
                             description = None
                             for col in range(len(df.columns)):
                                 if col != amount_col:
                                     desc_val = row[col]
-                                    if pd.notna(desc_val) and isinstance(desc_val, str) and desc_val.strip() and not ':' in desc_val:
+                                    if pd.notna(desc_val) and isinstance(desc_val, str) and desc_val.strip() and ':' not in desc_val:
                                         description = remove_colon(desc_val)
                                         break
                             
                             if description is None:
-                                description = INFO  # Utiliser la catégorie comme description
+                                description = INFO
                             
-                            # Utiliser le mapping pour Classification et Famille
-                            classification, found = get_classification(INFO)
-                            
-                            # Tracker les items non trouvés
-                            if not found and INFO not in unfound_items:
-                                unfound_items.append(INFO)
+                            famille, found_f = get_famille(INFO)
+                            if not found_f and INFO not in unfound_famille:
+                                unfound_famille.append(INFO)
+
+                            classification, found_c = get_classification(INFO)
+                            if not found_c and INFO not in unfound_classification:
+                                unfound_classification.append(INFO)
                             
                             ListeType.append(INFO)
-                            ListeFamille.append(classification)  # Utiliser la classification mappée
+                            ListeFamille.append(famille)
+                            ListeClassification.append(classification)
                             ListeDescription.append(description)
                             ListeDecharge.append(montant)
                         
                         i += 1
                         
-                        # Vérifier si on atteint une ligne "TOTAL"
                         for col in range(len(df.columns)):
                             check_val = row[col]
                             if pd.notna(check_val) and isinstance(check_val, str):
@@ -215,7 +220,6 @@ if uploaded_files:
                 else:
                     i += 1
                 
-                # Sécurité : vérifier les lignes TOTAL
                 if i < len(df):
                     for col in range(len(df.columns)):
                         check_val = df.iloc[i, col] if i < len(df) else None
@@ -229,17 +233,17 @@ if uploaded_files:
             if len(ListeDecharge) == 0:
                 raise ValueError(f"Aucune donnée extraite dans {uploaded_file.name}")
             
-            # Création du DataFrame pour ce fichier
             df_result = pd.DataFrame({
-                'Pays': [pays] * len(ListeFamille),
-                'Centre': [centre] * len(ListeFamille),
-                'Type': ListeType,
-                'Famille': ListeFamille,
-                'Description': ListeDescription,
-                'Mois': [mois] * len(ListeFamille),
-                'Annee': [annee] * len(ListeFamille),
-                'Ref': [date] * len(ListeFamille),
-                'Decharge': ListeDecharge
+                'Pays':           [pays]  * len(ListeFamille),
+                'Centre':         [centre] * len(ListeFamille),
+                'Type':           ListeType,
+                'Famille':        ListeFamille,
+                'Classification': ListeClassification,   # ← nouvelle colonne
+                'Description':    ListeDescription,
+                'Mois':           [mois]  * len(ListeFamille),
+                'Annee':          [annee] * len(ListeFamille),
+                'Ref':            [date]  * len(ListeFamille),
+                'Decharge':       ListeDecharge
             })
             
             return {
@@ -250,7 +254,8 @@ if uploaded_files:
                 'annee': annee,
                 'lignes': len(df_result),
                 'dataframe': df_result,
-                'unfound_items': unfound_items  # Ajouter la liste des items non trouvés
+                'unfound_famille': unfound_famille,
+                'unfound_classification': unfound_classification,
             }
             
         except Exception as e:
@@ -260,17 +265,14 @@ if uploaded_files:
                 'error': str(e)
             }
     
-    # Traiter tous les fichiers
     with st.spinner('Traitement en cours...'):
         results = []
         for uploaded_file in uploaded_files:
             result = process_file(uploaded_file)
             results.append(result)
-            
             if result['success']:
                 all_dataframes.append(result['dataframe'])
     
-    # Afficher un résumé du traitement
     st.subheader("📋 Résumé du traitement")
     
     success_count = sum(1 for r in results if r['success'])
@@ -282,35 +284,37 @@ if uploaded_files:
     with col2:
         st.metric("❌ Fichiers en erreur", error_count)
     
-    # Détails par fichier
     for result in results:
         if result['success']:
             st.success(f"✓ **{result['filename']}** : {result['centre']} - {result['mois']} {result['annee']} ({result['lignes']} lignes)")
         else:
             st.error(f"✗ **{result['filename']}** : {result['error']}")
     
-    # Afficher les warnings pour les items non trouvés dans le mapping
-    all_unfound = []
+    # Warnings Famille
+    all_unfound_f = []
     for result in results:
-        if result['success'] and result.get('unfound_items'):
-            all_unfound.extend(result['unfound_items'])
+        if result['success'] and result.get('unfound_famille'):
+            all_unfound_f.extend(result['unfound_famille'])
+    unique_unfound_f = list(set(all_unfound_f))
+    if unique_unfound_f:
+        st.warning(f"⚠️ **Famille non trouvée** : {', '.join(unique_unfound_f)}")
+
+    # Warnings Classification
+    all_unfound_c = []
+    for result in results:
+        if result['success'] and result.get('unfound_classification'):
+            all_unfound_c.extend(result['unfound_classification'])
+    unique_unfound_c = list(set(all_unfound_c))
+    if unique_unfound_c:
+        st.info(f"ℹ️ **Classification non trouvée** (CLASSIFICATION_DICT vide ou clé manquante) : {', '.join(unique_unfound_c)}")
     
-    # Dédupliquer et afficher
-    unique_unfound = list(set(all_unfound))
-    if unique_unfound:
-        st.warning(f"⚠️ **Info** : Certains types n'ont pas de classification définie et ont été marqués comme 'Aucune info' : {', '.join(unique_unfound)}")
-    
-    # Si au moins un fichier a été traité avec succès
     if all_dataframes:
-        # Combiner tous les DataFrames
         combined_df = pd.concat(all_dataframes, ignore_index=True)
         
         st.success(f"✨ Traitement terminé ! **{len(combined_df)} lignes au total** dans {len(all_dataframes)} fichier(s).")
         
-        # Aperçu du résultat combiné
         st.subheader("📊 Aperçu du résultat combiné")
         
-        # Statistiques par centre
         st.write("**Répartition par centre :**")
         centre_stats = combined_df.groupby('Centre').agg({
             'Decharge': ['count', 'sum']
@@ -318,26 +322,20 @@ if uploaded_files:
         centre_stats.columns = ['Nombre de lignes', 'Total décharge']
         st.dataframe(centre_stats)
         
-        # Aperçu des premières lignes
         st.write("**Premières lignes du fichier combiné :**")
         st.dataframe(combined_df.head(15))
         
-        # Conversion en Excel pour téléchargement
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             combined_df.to_excel(writer, index=False, sheet_name='Decharges')
         excel_data = output.getvalue()
         
-        # Nom du fichier de sortie
         if len(all_dataframes) == 1:
-            # Un seul fichier : utiliser le nom original
             result = results[0]
             output_filename = f'Decharges_{result["centre"]}_{result["mois"]}_{result["annee"]}.xlsx'
         else:
-            # Plusieurs fichiers : nom générique
             output_filename = f'Decharges_Combines_{len(all_dataframes)}_centres.xlsx'
         
-        # Bouton de téléchargement
         st.download_button(
             label=f"⬇️ Télécharger le fichier combiné ({len(all_dataframes)} centre(s))",
             data=excel_data,
